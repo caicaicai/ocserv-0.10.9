@@ -39,7 +39,7 @@
 # include <radcli/radcli.h>
 #endif
 
-#define RAD_GROUP_NAME 1030
+#define RAD_GROUP_NAME 36
 #define RAD_IPV4_DNS1 ((311<<16)|(28))
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
 
@@ -266,10 +266,15 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	ret = rc_aaa(rh, pctx->id, send, &recvd, NULL, 1, PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {
+		syslog(LOG_DEBUG, "radius-auth: -----------------ret == OK_RC");
 		VALUE_PAIR *vp = recvd;
 		uint32_t ipv4;
 		uint8_t ipv6[16];
+		if(vp == NULL) {
+			syslog(LOG_DEBUG, "radius-auth: ------------vp == null!!!!");
+		}
 		while(vp != NULL) {
+			syslog(LOG_DEBUG, "radius-auth: get attribute:'%d',attribute-type:'%d'",vp->attribute,vp->type);
 			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
 				syslog(LOG_ERR,
 				       "%s:%u: unknown radius service type '%d'", __func__, __LINE__,
@@ -277,7 +282,9 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				goto fail;
 			} else if (vp->attribute == RAD_GROUP_NAME && vp->type == PW_TYPE_STRING) {
 				/* Group-Name */
+				syslog(LOG_DEBUG, "radius-auth: -------setup Group-Name '%s'",vp->strvalue);
 				strlcpy(pctx->groupname, vp->strvalue, sizeof(pctx->groupname));
+				syslog(LOG_DEBUG, "radius-auth: -------now pctx->groupname is  '%s'",pctx->groupname);
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
 				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
